@@ -23,26 +23,4 @@ The system continuously acquires telemetry from MQ-8 gas sensors and ultrasonic 
 - **Machine Learning:** Scikit-Learn (Isolation Forest), Joblib, Pandas, NumPy
 - **Frontend:** HTML5, CSS3, JavaScript (ES6+), TypeScript
 
-## Data & Safety Pipeline
 
-┌─────────────────────────┐ ┌─────────────────────────┐
-│ Hardware USB Serial │ OR │ Thermal Runaway │
-│ (Gas Sensor + Probes) │ │ Simulation Engine │
-└────────────┬────────────┘ └────────────┬────────────┘
-│ │
-└────────────────┬───────────────┘
-│
-▼
-┌───────────────────────────────────────────┐
-│ DSP & Telemetry Engine │
-├───────────────────────────────────────────┤
-│ • Kalman Filter (Gas PPM) │
-│ • Two-Stage EMA Filter (Swelling/Rate) │
-│ • Isolation Forest Anomaly Score │
-│ • Composite Risk Calculation & Smoothing │
-└─────────────────────┬─────────────────────┘
-│
-┌──────────────┴──────────────┐
-▼ ▼
-Safety Hardware Actuation WebSocket Stream
-(Gas Buzzers) (JSON Sensor Update)
