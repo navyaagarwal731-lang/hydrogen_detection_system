@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Multi-Modal Chemical-Physical Correlation Engine</title>
+    
+    <!-- Meta Descriptions & SEO -->
+    <meta name="description" content="Multi-Modal Chemical-Physical Correlation Engine for real-time battery safety telemetry, drift-compensated gas sensing, ultrasonic displacement, and early thermal runaway detection.">
+    <meta name="keywords" content="battery safety, thermal runaway detection, lithium-ion safety, hydrogen gas sensor, MQ-8, ultrasonic displacement, AI anomaly detection, ESP32 telemetry, Kalman filter, edge computing">
+    <meta name="author" content="Safety Engineering Department">
+    <meta name="theme-color" content="#F3EFE7">
+    
+    <!-- Open Graph Metadata -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Multi-Modal Chemical-Physical Correlation Engine">
+    <meta property="og:description" content="Deterministic multi-modal telemetry dashboard with Kalman-filtered gas sensing, ultrasonic acoustic swelling detection, and Isolation Forest anomaly scoring.">
+    <meta property="og:image" content="favicon.svg">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+
+    <!-- Clean Typography: Plus Jakarta Sans, Manrope, DM Sans, IBM Plex Sans, Source Sans 3 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Local Chart.js bundle (100% offline capable) -->
+    <!-- Replace local 404 script tags with CDN links -->
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="theme-calibrating">
+    <!-- Alert Border Highlight on Critical Hazard -->
+    <div id="alarm-flash-overlay" aria-hidden="true"></div>
+
+    <!-- MAIN APPLICATION WRAPPER -->
+    <div class="app-layout">
+        
+        <!-- STICKY TOP NAVIGATION BAR -->
+        <header class="navbar" id="top-navbar">
+            <div class="nav-container">
+                <!-- Brand Header -->
+                <div class="brand-section">
+                    <div class="brand-text">
+                        <h1 class="brand-title">MULTI-MODAL CHEMICAL-PHYSICAL CORRELATION ENGINE</h1>
+                        <span class="brand-subtitle">INDUSTRIAL BATTERY SAFETY &amp; EARLY THERMAL RUNAWAY DETECTION SYSTEM</span>
+                    </div>
+                </div>
+
+                <!-- Status Indicators & Quick Actions -->
+                <div class="nav-actions">
+                    <div class="status-badge-group">
+                        <div class="status-badge" id="hw-source-badge" title="Hardware Connection Source">
+                            <span class="status-badge-dot"></span>
+                            <span id="hw-source-text" class="status-badge-text">LINK: CONNECTING...</span>
+                        </div>
+                        <div class="status-badge mode-badge" id="mode-badge" title="Operational State">
+                            <span class="badge-label">STATE:</span>
+                            <span id="mode-badge-text" class="status-badge-text state-text">CALIBRATING</span>
+                        </div>
+                    </div>
+
+                    <div class="nav-controls">
+                        <button id="btn-demo-toggle" class="btn btn-demo" title="Toggle Simulated Thermal Runaway Scenario">
+                            <span id="demo-btn-text">RUN SIMULATION</span>
+                        </button>
+                        <button id="btn-recalibrate" class="btn btn-secondary" title="Re-zero Clean-Air R0 Reference Baseline">
+                            <span>RECALIBRATE R0</span>
+                        </button>
+                        <button id="btn-audio-toggle" class="btn btn-secondary" title="Toggle Audible Synthesizer Alarms">
+                            <span id="audio-btn-label">AUDIO: MUTED</span>
+                        </button>
+                    </div>
+
+                    <!-- Mobile Menu Toggle Button -->
+                    <button id="mobile-menu-toggle" class="mobile-toggle" aria-label="Toggle mobile menu" aria-expanded="false">
+                        <span class="toggle-text">MENU</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mobile Navigation Drawer -->
+            <div id="mobile-drawer" class="mobile-drawer" aria-hidden="true">
+                <nav class="mobile-nav-links">
+                    <a href="#overview" class="mobile-nav-link">System Overview</a>
+                    <a href="#threat-engine" class="mobile-nav-link">Speedometer Threat Gauge</a>
+                    <a href="#sensor-suite" class="mobile-nav-link">Chemical &amp; Physical Sensors</a>
+                    <a href="#telemetry-charts" class="mobile-nav-link">Time-Series Telemetry</a>
+                    <a href="#system-controls" class="mobile-nav-link">Hardware Actuation Controls</a>
+                    <a href="#audit-log" class="mobile-nav-link">System Event Audit Ledger</a>
+                    <a href="#specifications" class="mobile-nav-link">Hardware Pinouts &amp; BOM</a>
+                    <a href="#legal-section" class="mobile-nav-link">Terms of Service &amp; Privacy Policy</a>
+                </nav>
+                <div class="mobile-drawer-controls">
+                    <div class="mobile-control-item">
+                        <span>Exhaust Fan Manual Override</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="mobile-fan-toggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- PERSISTENT CAUTION / CRITICAL ALERT NOTIFICATION BANNER -->
+        <div id="alert-banner" class="alert-banner hidden" role="alert">
+            <div class="alert-banner-inner">
+                <div class="alert-content">
+                    <strong class="alert-tag">HAZARD ADVISORY:</strong>
+                    <span id="alert-banner-text" class="alert-text">Elevated gas surge or cell expansion detected</span>
+                </div>
+                <button class="alert-dismiss-btn" id="btn-alert-dismiss" aria-label="Acknowledge alert">ACKNOWLEDGE</button>
+            </div>
+        </div>
+
+        <!-- MAIN SCROLLABLE CONTENT BODY -->
+        <main class="content-body" id="main-content">
+
+            <!-- SECTION 1: TOP 4-COLUMN SYSTEM METRIC STRIP -->
+            <section id="overview" class="section-container">
+                <div class="metrics-strip-grid">
+                    <!-- Metric 1: System Threat State -->
+                    <div class="metric-box">
+                        <span class="metric-box-label">OVERALL SYSTEM STATE</span>
+                        <div class="metric-box-value">
+                            <span id="val-summary-status" class="val-text text-sage">CALIBRATING</span>
+                        </div>
+                        <span class="metric-box-sub" id="val-summary-sub">Sensors stabilizing in clean reference air</span>
+                    </div>
+
+                    <!-- Metric 2: AI Anomaly Confidence -->
+                    <div class="metric-box">
+                        <span class="metric-box-label">ISOLATION FOREST ANOMALY SCORE</span>
+                        <div class="metric-box-value">
+                            <span id="val-summary-ml" class="val-text">--%</span>
+                            <span class="metric-tag-pill">ADVISORY</span>
+                        </div>
+                        <span class="metric-box-sub">5-feature multivariate non-linear precursor estimator</span>
+                    </div>
+
+                    <!-- Metric 3: Actuation Relay Status -->
+                    <div class="metric-box">
+                        <span class="metric-box-label">EXHAUST FAN &amp; ALARM RELAYS</span>
+                        <div class="metric-box-value">
+                            <span id="val-summary-actuation" class="val-text">IDLE (OFF)</span>
+                        </div>
+                        <span class="metric-box-sub">GPIO 21 optocoupled relay / dual warning buzzers</span>
+                    </div>
+
+                    <!-- Metric 4: R0 Clean-Air Baseline -->
+                    <div class="metric-box">
+                        <span class="metric-box-label">R0 CLEAN-AIR REFERENCE BASELINE</span>
+                        <div class="metric-box-value">
+                            <span id="val-summary-r0" class="val-text">LOCKING...</span>
+                        </div>
+                        <span class="metric-box-sub">10-second moving average baseline stabilizer</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 2: SPEEDOMETER THREAT GAUGE & DECISION ENGINE -->
+            <section id="threat-engine" class="section-container">
+                <div class="section-heading-bar">
+                    <h2 class="section-title">DECISION MATRIX &amp; THREAT GAUGE</h2>
+                    <span class="section-sub">Multi-modal sensor fusion combining chemical outgassing, mechanical expansion, and rate derivatives</span>
+                </div>
+
+                <div class="engine-two-col-grid">
+                    <!-- Left: Exact Match Speedometer Threat Gauge Panel -->
+                    <div class="panel gauge-panel">
+                        <div class="gauge-panel-top">
+                            <span class="panel-header-title">SPEEDOMETER THREAT GAUGE</span>
+                            <div class="live-score-pill">
+                                <span class="live-score-dot"></span>
+                                <span class="live-score-text">LIVE RISK SCORE</span>
+                            </div>
+                        </div>
+
+                        <div class="gauge-canvas-box">
+                            <canvas id="threat-gauge" width="460" height="260"></canvas>
+                            <div class="gauge-center-content">
+                                <div id="gauge-percent" class="gauge-pct-val">0.0%</div>
+                                <div id="threat-status-label" class="gauge-state-label">NOMINAL</div>
+                            </div>
+                        </div>
+
+                        <div class="gauge-scale-footer">
+                            <div class="scale-item">
+                                <span class="scale-dot dot-nominal"></span>
+                                <span>0–39% Nominal</span>
+                            </div>
+                            <div class="scale-item">
+                                <span class="scale-dot dot-caution"></span>
+                                <span>40–69% Caution</span>
+                            </div>
+                            <div class="scale-item">
+                                <span class="scale-dot dot-critical"></span>
+                                <span>70–100% Critical</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: 4-Way Weighted Factor Breakdown & ML Advisory -->
+                    <div class="panel factors-panel">
+                        <div class="factors-header">
+                            <span class="panel-header-title">RISK WEIGHTING BREAKDOWN</span>
+                            <span class="factors-sub">Formula: (0.40 × Gas) + (0.30 × Swell) + (0.20 × Trend) + Boost</span>
+                        </div>
+
+                        <div class="factors-grid-2x2">
+                            <!-- Factor 1: Gas Outgassing -->
+                            <div class="factor-item" id="pill-gas-risk">
+                                <div class="factor-item-top">
+                                    <span class="factor-name">Hydrogen Gas Concentration</span>
+                                    <span class="factor-weight">40% WEIGHT</span>
+                                </div>
+                                <div class="factor-track">
+                                    <div id="bar-gas-risk" class="factor-fill" style="width: 0%"></div>
+                                </div>
+                                <div class="factor-item-bottom">
+                                    <span class="factor-threshold">Pre-venting threshold &gt; 100 ppm</span>
+                                    <span id="val-gas-risk" class="factor-score">0%</span>
+                                </div>
+                            </div>
+
+                            <!-- Factor 2: Mechanical Swelling -->
+                            <div class="factor-item" id="pill-swell-risk">
+                                <div class="factor-item-top">
+                                    <span class="factor-name">Swelling Velocity</span>
+                                    <span class="factor-weight">30% WEIGHT</span>
+                                </div>
+                                <div class="factor-track">
+                                    <div id="bar-swell-risk" class="factor-fill" style="width: 0%"></div>
+                                </div>
+                                <div class="factor-item-bottom">
+                                    <span class="factor-threshold">Kinetic expansion &gt; 0.10 mm/s</span>
+                                    <span id="val-swell-risk" class="factor-score">0%</span>
+                                </div>
+                            </div>
+
+                            <!-- Factor 3: Rate of Rise Trend -->
+                            <div class="factor-item" id="pill-trend-risk">
+                                <div class="factor-item-top">
+                                    <span class="factor-name">Gas Acceleration Derivative</span>
+                                    <span class="factor-weight">20% WEIGHT</span>
+                                </div>
+                                <div class="factor-track">
+                                    <div id="bar-trend-risk" class="factor-fill" style="width: 0%"></div>
+                                </div>
+                                <div class="factor-item-bottom">
+                                    <span class="factor-threshold">10s Rolling Derivative d(PPM)/dt</span>
+                                    <span id="val-trend-risk" class="factor-score">0%</span>
+                                </div>
+                            </div>
+
+                            <!-- Factor 4: Synergistic Correlation Multiplier -->
+                            <div class="factor-item" id="pill-correlation-boost">
+                                <div class="factor-item-top">
+                                    <span class="factor-name">Correlation Multiplier</span>
+                                    <span class="factor-weight">+20% BOOST</span>
+                                </div>
+                                <div class="factor-track">
+                                    <div id="bar-correlation-boost" class="factor-fill" style="width: 0%"></div>
+                                </div>
+                                <div class="factor-item-bottom">
+                                    <span class="factor-threshold">Active when Gas &gt; 20% &amp; Swell &gt; 20%</span>
+                                    <span id="val-correlation-boost" class="factor-score">INACTIVE</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Isolation Forest ML Model Metadata -->
+                        <div class="ml-advisory-box" id="ml-badge">
+                            <div class="ml-box-left">
+                                <strong class="ml-box-title">ISOLATION FOREST MACHINE LEARNING ADVISORY</strong>
+                                <p class="ml-box-desc">
+                                    Unsupervised model trained on nominal thermal drift baseline. Surfaces multivariate shifts across gas, displacement, acceleration, and probe spread without overriding safety relays.
+                                </p>
+                            </div>
+                            <div class="ml-box-right">
+                                <span class="ml-readout-label">Anomaly Probability</span>
+                                <strong id="val-ml-anomaly" class="ml-readout-val">--%</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 3: CHEMICAL & PHYSICAL SENSOR MATRICES -->
+            <section id="sensor-suite" class="section-container">
+                <div class="section-heading-bar">
+                    <h2 class="section-title">CHEMICAL &amp; PHYSICAL SENSOR MATRICES</h2>
+                    <span class="section-sub">Synchronous 2 Hz telemetry bus across gas channels, ultrasonic displacement probes, and safety relays</span>
+                </div>
+
+                <div class="two-col-grid">
+                    <!-- Column 1: Hydrogen Gas Detection (MQ-8) -->
+                    <div class="panel sensor-panel" id="card-gas">
+                        <div class="panel-header-row">
+                            <div>
+                                <h3 class="panel-title">HYDROGEN GAS SENSORS (H2)</h3>
+                                <span class="panel-sub">Dual MQ-8 Sensors with 1.5x Resistor Voltage Divider Protection</span>
+                            </div>
+                            <span class="badge-chip">GPIO 35 / GPIO 36</span>
+                        </div>
+
+                        <div class="sensor-channels-row">
+                            <!-- Channel 1 -->
+                            <div class="channel-card">
+                                <div class="channel-card-top">
+                                    <span class="channel-name">CHANNEL 1 (GPIO 35)</span>
+                                    <span class="channel-badge">PRIMARY</span>
+                                </div>
+                                <div class="channel-reading">
+                                    <span id="val-mq8-1-ppm" class="reading-num">--</span>
+                                    <span class="reading-unit">PPM</span>
+                                </div>
+                                <div class="channel-meta-list">
+                                    <div class="meta-row">
+                                        <span>Output Voltage:</span>
+                                        <strong id="val-mq8-1-vout">-- V</strong>
+                                    </div>
+                                    <div class="meta-row">
+                                        <span>R0 Baseline:</span>
+                                        <strong id="val-r0-1">-- Ω</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Channel 2 -->
+                            <div class="channel-card">
+                                <div class="channel-card-top">
+                                    <span class="channel-name">CHANNEL 2 (GPIO 36)</span>
+                                    <span class="channel-badge">CROSS-CHECK</span>
+                                </div>
+                                <div class="channel-reading">
+                                    <span id="val-mq8-2-ppm" class="reading-num">--</span>
+                                    <span class="reading-unit">PPM</span>
+                                </div>
+                                <div class="channel-meta-list">
+                                    <div class="meta-row">
+                                        <span>Output Voltage:</span>
+                                        <strong id="val-mq8-2-vout">-- V</strong>
+                                    </div>
+                                    <div class="meta-row">
+                                        <span>R0 Baseline:</span>
+                                        <strong id="val-r0-2">-- Ω</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Micro Sparkline Container -->
+                        <div class="sparkline-box">
+                            <div class="sparkline-meta">
+                                <span>60-Second Real-Time Gas Trend (1D Discrete Kalman Filtered)</span>
+                            </div>
+                            <div class="sparkline-canvas-box">
+                                <canvas id="gas-sparkline" width="460" height="42"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Column 2: Mechanical Swelling & Safety Relays -->
+                    <div class="panel sensor-panel" id="card-swell">
+                        <div class="panel-header-row">
+                            <div>
+                                <h3 class="panel-title">ULTRASONIC SWELLING &amp; ACTUATION</h3>
+                                <span class="panel-sub">3-Probe Acoustic Array (25ms Ping Spacing) &amp; Safety Relays</span>
+                            </div>
+                            <span class="badge-chip">HC-SR04 / HW-611</span>
+                        </div>
+
+                        <!-- Ultrasonic Probes List -->
+                        <div class="probe-list">
+                            <div class="probe-item">
+                                <div class="probe-item-label">
+                                    <strong>PROBE 1</strong>
+                                    <span>Left Anode</span>
+                                </div>
+                                <div class="probe-item-track">
+                                    <div id="bar-probe-1" class="probe-item-fill" style="width: 0%"></div>
+                                </div>
+                                <span class="probe-item-val"><span id="val-disp-1">0.0</span> mm</span>
+                            </div>
+
+                            <div class="probe-item">
+                                <div class="probe-item-label">
+                                    <strong>PROBE 2</strong>
+                                    <span>Center Pouch</span>
+                                </div>
+                                <div class="probe-item-track">
+                                    <div id="bar-probe-2" class="probe-item-fill" style="width: 0%"></div>
+                                </div>
+                                <span class="probe-item-val"><span id="val-disp-2">0.0</span> mm</span>
+                            </div>
+
+                            <div class="probe-item">
+                                <div class="probe-item-label">
+                                    <strong>PROBE 3</strong>
+                                    <span>Right Cathode</span>
+                                </div>
+                                <div class="probe-item-track">
+                                    <div id="bar-probe-3" class="probe-item-fill" style="width: 0%"></div>
+                                </div>
+                                <span class="probe-item-val"><span id="val-disp-3">0.0</span> mm</span>
+                            </div>
+                        </div>
+
+                        <!-- Kinetic Derivatives -->
+                        <div class="kinetics-row">
+                            <div class="kinetic-card">
+                                <span class="kinetic-label">MAX SWELLING VELOCITY</span>
+                                <div class="kinetic-val-wrap">
+                                    <span id="val-swell-rate" class="kinetic-val">0.000</span>
+                                    <span class="kinetic-unit">mm/s</span>
+                                </div>
+                            </div>
+                            <div class="kinetic-card">
+                                <span class="kinetic-label">PROBE ASYMMETRY (SPREAD)</span>
+                                <div class="kinetic-val-wrap">
+                                    <span id="val-probe-spread" class="kinetic-val">0.00</span>
+                                    <span class="kinetic-unit">mm</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Hardware Actuation Relays List -->
+                        <div class="actuator-list">
+                            <div class="actuator-row">
+                                <div class="actuator-desc">
+                                    <strong>DC Exhaust Cooling Fan (GPIO 21)</strong>
+                                    <span>Optocoupled HW-611 Power Relay</span>
+                                </div>
+                                <span id="pill-relay-fan" class="status-pill pill-idle">IDLE (OFF)</span>
+                            </div>
+                            <div class="actuator-row">
+                                <div class="actuator-desc">
+                                    <strong>Gas Warning Buzzer (GPIO 18)</strong>
+                                    <span>Pulsing 500 Hz Active Warning Tone</span>
+                                </div>
+                                <span id="pill-buzzer-gas" class="status-pill pill-idle">MUTED</span>
+                            </div>
+                            <div class="actuator-row">
+                                <div class="actuator-desc">
+                                    <strong>Swelling Alarm Buzzer (GPIO 19)</strong>
+                                    <span>Continuous 750 Hz Critical Alarm Tone</span>
+                                </div>
+                                <span id="pill-buzzer-swell" class="status-pill pill-idle">MUTED</span>
+                            </div>
+                            <div class="actuator-row">
+                                <div class="actuator-desc">
+                                    <strong>Dual RYG Signal Towers</strong>
+                                    <span>Modules 1 &amp; 2 (Active-High Output)</span>
+                                </div>
+                                <span id="pill-ryg-state" class="status-pill pill-green">NORMAL (GREEN)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 4: REAL-TIME TELEMETRY TREND CHARTS -->
+            <section id="telemetry-charts" class="section-container">
+                <div class="section-heading-bar">
+                    <h2 class="section-title">TIME-SERIES TELEMETRY VISUALIZERS</h2>
+                    <span class="section-sub">Rolling 60-second FIFO telemetry streams with discrete Kalman filtering and rolling median flutter rejection</span>
+                </div>
+
+                <div class="two-col-grid">
+                    <!-- Chart 1: Hydrogen Gas Concentration -->
+                    <div class="panel chart-panel">
+                        <div class="chart-header">
+                            <div>
+                                <h3 class="panel-title">HYDROGEN (H2) CONCENTRATION: RAW VS. KALMAN</h3>
+                                <span class="panel-sub">1D Discrete Kalman Filter (Q=0.1, R=20.0)</span>
+                            </div>
+                            <div class="chart-legend">
+                                <span class="legend-chip"><span class="legend-dot dot-gray"></span> RAW CH1</span>
+                                <span class="legend-chip"><span class="legend-dot dot-sage"></span> KALMAN FILTERED</span>
+                            </div>
+                        </div>
+                        <div class="chart-box">
+                            <canvas id="chart-gas-telemetry"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Chart 2: 3-Probe Ultrasonic Displacement -->
+                    <div class="panel chart-panel">
+                        <div class="chart-header">
+                            <div>
+                                <h3 class="panel-title">3-PROBE ULTRASONIC DISPLACEMENT (mm)</h3>
+                                <span class="panel-sub">10-Sample Rolling Median Flutter Filter</span>
+                            </div>
+                            <div class="chart-legend">
+                                <span class="legend-chip"><span class="legend-dot dot-teal"></span> PROBE 1</span>
+                                <span class="legend-chip"><span class="legend-dot dot-amber"></span> PROBE 2</span>
+                                <span class="legend-chip"><span class="legend-dot dot-sage"></span> PROBE 3</span>
+                            </div>
+                        </div>
+                        <div class="chart-box">
+                            <canvas id="chart-ultrasonic-telemetry"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 5: HARDWARE ACTUATION CONTROLS & BENCH SIMULATION -->
+            <section id="system-controls" class="section-container">
+                <div class="section-heading-bar">
+                    <h2 class="section-title">HARDWARE ACTUATION &amp; BENCH CONTROLS</h2>
+                    <span class="section-sub">Direct operator control over fan relays, baseline recalibration, and thermal runaway simulation</span>
+                </div>
+
+                <div class="two-col-grid">
+                    <!-- Control 1: Fan Relay Manual Override -->
+                    <div class="panel control-panel">
+                        <div class="control-panel-header">
+                            <h3 class="panel-title">MANUAL FAN RELAY OVERRIDE</h3>
+                            <p class="control-panel-desc">Directly energize the HW-611 optocoupled relay regardless of current risk threshold.</p>
+                        </div>
+                        <div class="control-panel-action">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="fan-override-toggle">
+                                <span class="slider"></span>
+                            </label>
+                            <span class="toggle-label" id="fan-override-label">MODE: AUTOMATIC SAFETY</span>
+                        </div>
+                    </div>
+
+                    <!-- Control 2: Thermal Runaway Scenario Simulator -->
+                    <div class="panel control-panel">
+                        <div class="control-panel-header">
+                            <h3 class="panel-title">THERMAL RUNAWAY SCENARIO SIMULATOR</h3>
+                            <p class="control-panel-desc">Injects a multi-stage thermal failure progression (Nominal to Venting to Critical Runaway).</p>
+                        </div>
+                        <div class="control-panel-action">
+                            <button id="btn-demo-panel-toggle" class="btn btn-primary">
+                                <span>START SIMULATION DEMO</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Control 3: Clean-Air R0 Baseline Recalibration -->
+                    <div class="panel control-panel">
+                        <div class="control-panel-header">
+                            <h3 class="panel-title">MQ-8 SENSOR R0 RECALIBRATION</h3>
+                            <p class="control-panel-desc">Re-locks clean-air reference resistance over a 10-second moving average window.</p>
+                        </div>
+                        <div class="control-panel-action">
+                            <button id="btn-recalibrate-panel" class="btn btn-secondary">
+                                <span>TRIGGER RECALIBRATION</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Control 4: Web Audio Synthesizer Alarms -->
+                    <div class="panel control-panel">
+                        <div class="control-panel-header">
+                            <h3 class="panel-title">WEB AUDIO SYNTHESIZER ALARMS</h3>
+                            <p class="control-panel-desc">Browser-based audio synthesizer for bench validation without physical buzzers.</p>
+                        </div>
+                        <div class="control-panel-action">
+                            <button id="btn-audio-panel-toggle" class="btn btn-secondary">
+                                <span id="panel-audio-text">UNMUTE AUDIO ALARMS</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 6: SYSTEM EVENT AUDIT LEDGER (Formal Table) -->
+            <section id="audit-log" class="section-container">
+                <div class="section-heading-bar">
+                    <h2 class="section-title">SYSTEM EVENT AUDIT LEDGER</h2>
+                    <span class="section-sub">Chronological audit ledger recording hardware state transitions, relay activations, and anomaly evaluations</span>
+                </div>
+
+                <div class="panel ledger-panel">
+                    <div class="ledger-toolbar">
+                        <div class="ledger-filter-group">
+                            <button class="filter-btn active" data-filter="all">ALL ENTRIES</button>
+                            <button class="filter-btn" data-filter="alert">ALARMS</button>
+                            <button class="filter-btn" data-filter="info">RELAYS</button>
+                            <button class="filter-btn" data-filter="system">SYSTEM &amp; ML</button>
+                        </div>
+
+                        <div class="ledger-tools">
+                            <label class="autoscroll-switch">
+                                <input type="checkbox" id="autoscroll-checkbox" checked>
+                                <span>AUTO-SCROLL</span>
+                            </label>
+                            <button id="btn-clear-log" class="btn btn-sm btn-secondary">CLEAR LEDGER</button>
+                            <button id="btn-export-log" class="btn btn-sm btn-secondary">EXPORT AS TXT</button>
+                        </div>
+                    </div>
+
+                    <div class="ledger-container" id="event-log-terminal" role="log" aria-live="polite">
+                        <div class="ledger-entry system" data-type="system">
+                            <span class="log-time">[BOOT]</span>
+                            <span class="log-source">SYSTEM:</span>
+                            <span class="log-msg">Multi-Modal Chemical-Physical Correlation Engine initialized. Ready for 2 Hz telemetry stream.</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 7: HARDWARE SPECIFICATIONS & PINOUT BOM -->
+            <section id="specifications" class="section-container">
+                <div class="section-heading-bar">
+                    <h2 class="section-title">HARDWARE SPECIFICATIONS &amp; SIGNAL FORMULATIONS</h2>
+                    <span class="section-sub">ESP32 pin allocations, voltage divider protection rules, and mathematical conditioning equations</span>
+                </div>
+
+                <div class="two-col-grid">
+                    <!-- Table 1: ESP32 Hardware BOM & Pinout -->
+                    <div class="panel specs-panel">
+                        <div class="specs-panel-header">
+                            <h3 class="panel-title">ESP32 PIN ALLOCATION &amp; HARDWARE BOM</h3>
+                            <span class="badge-chip">FIRMWARE V3.2</span>
+                        </div>
+
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Component</th>
+                                        <th>Function</th>
+                                        <th>GPIO Pin</th>
+                                        <th>Electrical Constraints</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>MQ-8 Sensor 1</strong></td>
+                                        <td>Analog Out</td>
+                                        <td><code>GPIO 35</code></td>
+                                        <td>ADC1_CH7 via 1kΩ / 2kΩ divider (3.3V safe)</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>MQ-8 Sensor 2</strong></td>
+                                        <td>Analog Out</td>
+                                        <td><code>GPIO 36</code></td>
+                                        <td>ADC1_CH0 via 1kΩ / 2kΩ divider (3.3V safe)</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>HC-SR04 Probe 1</strong></td>
+                                        <td>TRIG / ECHO</td>
+                                        <td><code>GPIO 2 / 32</code></td>
+                                        <td>ECHO on 32 via 1k/2k divider. GPIO 2 low at reset.</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>HC-SR04 Probe 2</strong></td>
+                                        <td>TRIG / ECHO</td>
+                                        <td><code>GPIO 4 / 33</code></td>
+                                        <td>ECHO on 33 via 1k/2k divider.</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>HC-SR04 Probe 3</strong></td>
+                                        <td>TRIG / ECHO</td>
+                                        <td><code>GPIO 5 / 34</code></td>
+                                        <td>ECHO on 34 via 1k/2k divider. GPIO 5 is strapping pin.</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Exhaust Fan Relay</strong></td>
+                                        <td>IN1 (DC Fan)</td>
+                                        <td><code>GPIO 21</code></td>
+                                        <td>HW-611 Optocoupled Relay</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Buzzer 1 (Gas)</strong></td>
+                                        <td>Digital Out</td>
+                                        <td><code>GPIO 18</code></td>
+                                        <td>Active buzzer pulsing 500 Hz tone</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Buzzer 2 (Swell)</strong></td>
+                                        <td>Digital Out</td>
+                                        <td><code>GPIO 19</code></td>
+                                        <td>Active buzzer continuous 750 Hz tone</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Formulations List -->
+                    <div class="panel specs-panel">
+                        <div class="specs-panel-header">
+                            <h3 class="panel-title">MATHEMATICAL SIGNAL CONDITIONING</h3>
+                            <span class="badge-chip">ALGORITHMS</span>
+                        </div>
+
+                        <div class="formulations-list">
+                            <div class="formulation-item">
+                                <span class="formulation-title">1. Voltage Divider &amp; Hydrogen PPM Calculation</span>
+                                <code class="formulation-code">Vout = (ADC * 3.3 / 4095) * 1.5</code>
+                                <code class="formulation-code">PPM_H2 = 900.0 * (Rs / R0)^(-2.1)</code>
+                                <p class="formulation-desc">Compensates 1kΩ / 2kΩ divider resistance and non-linear semiconductor curve.</p>
+                            </div>
+
+                            <div class="formulation-item">
+                                <span class="formulation-title">2. 1D Discrete Kalman Filter (Drift Suppression)</span>
+                                <code class="formulation-code">Q = 0.1 (Process Noise) | R = 20.0 (Measurement Noise)</code>
+                                <p class="formulation-desc">Eliminates thermal jitter and drift while preserving true gas transients.</p>
+                            </div>
+
+                            <div class="formulation-item">
+                                <span class="formulation-title">3. Multi-Modal Risk Scoring Formula</span>
+                                <code class="formulation-code">Risk = (0.40 * GasRisk) + (0.30 * SwellRisk) + (0.20 * TrendRisk) + Boost</code>
+                                <p class="formulation-desc">+20% Correlation Boost added when Gas &gt; 20% and Swell &gt; 20% simultaneously.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 8: LEGAL COMPLIANCE, TERMS OF SERVICE & PRIVACY POLICY -->
+            <section id="legal-section" class="section-container">
+                <div class="section-heading-bar">
+                    <h2 class="section-title">COMPLIANCE, TERMS OF SERVICE &amp; PRIVACY POLICY</h2>
+                    <span class="section-sub">Operational safety boundaries, data governance, and liability disclosures</span>
+                </div>
+
+                <div class="two-col-grid">
+                    <!-- Terms of Service Summary Card -->
+                    <div class="panel legal-panel">
+                        <div class="legal-header">
+                            <h3 class="panel-title">TERMS OF SERVICE (TOS)</h3>
+                            <span class="badge-chip">SAFETY ADVISORY</span>
+                        </div>
+                        <div class="legal-text-content">
+                            <p><strong>1. Operational Intended Use:</strong> The Multi-Modal Chemical-Physical Correlation Engine is an edge-based industrial telemetry and early hazard advisory system. It is designed to assist battery management systems (BMS) and operators in early detection of cell venting and swelling.</p>
+                            <p><strong>2. Hardware Relays &amp; Secondary Interlocks:</strong> Hardware safety interlocks (such as the GPIO 21 exhaust fan relay) operate deterministically. Machine learning inference outputs (Isolation Forest anomaly confidence) are strictly advisory and do not override hardcoded safety trip points.</p>
+                            <p><strong>3. Limitation of Liability:</strong> Sensor outputs are subject to environmental drift and clean-air reference recalibration. This software does not substitute for certified physical fire suppression infrastructure or certified safety containment protocols.</p>
+                        </div>
+                    </div>
+
+                    <!-- Privacy Policy Summary Card -->
+                    <div class="panel legal-panel">
+                        <div class="legal-header">
+                            <h3 class="panel-title">PRIVACY &amp; TELEMETRY POLICY</h3>
+                            <span class="badge-chip">DATA GOVERNANCE</span>
+                        </div>
+                        <div class="legal-text-content">
+                            <p><strong>1. Local Edge Processing:</strong> All sensor conditioning (Kalman filtering, median filtering, rate calculations, and machine learning inference) is performed locally on the edge node. No battery telemetry data is transmitted to external cloud services without explicit configuration.</p>
+                            <p><strong>2. Diagnostic Audit Logging:</strong> System audit logs and event ledgers are stored strictly in local memory and are accessible only by authorized local operators. No persistent user tracking cookies or third-party analytics are embedded.</p>
+                            <p><strong>3. Compliance &amp; Audits:</strong> Telemetry logs exported by operators are formatted in standard plain text for regulatory compliance verification and post-incident investigation.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- FOOTER -->
+        <footer class="app-footer">
+            <div class="footer-container">
+                <div class="footer-col brand-col">
+                    <h4 class="footer-brand-title">MULTI-MODAL CHEMICAL-PHYSICAL CORRELATION ENGINE</h4>
+                    <p class="footer-desc">Industrial edge telemetry and early thermal runaway prevention platform.</p>
+                    <div class="footer-status-pill">
+                        <span class="footer-pulse"></span>
+                        <span>Telemetry Server 2 Hz Active</span>
+                    </div>
+                </div>
+
+                <div class="footer-col">
+                    <h4 class="footer-heading">Navigation</h4>
+                    <ul class="footer-links">
+                        <li><a href="#overview">Overview</a></li>
+                        <li><a href="#threat-engine">Threat Decision Matrix</a></li>
+                        <li><a href="#sensor-suite">Sensor Matrices</a></li>
+                        <li><a href="#telemetry-charts">Time-Series Telemetry</a></li>
+                        <li><a href="#specifications">Hardware Pinouts &amp; BOM</a></li>
+                        <li><a href="#legal-section">Terms of Service &amp; Privacy</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-col">
+                    <h4 class="footer-heading">Emergency &amp; Engineering Contacts</h4>
+                    <ul class="footer-links">
+                        <li>
+                            <a href="mailto:safety-eng@battsafe.internal?subject=Chemical%20Physical%20Engine%20Technical%20Inquiry" class="clickable-email">
+                                <div>
+                                    <strong>Safety Engineering Department</strong>
+                                    <span class="email-addr">safety-eng@battsafe.internal</span>
+                                </div>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="mailto:incident-response@battsafe.internal?subject=URGENT%20Hazard%20Report" class="clickable-email">
+                                <div>
+                                    <strong>Incident Response Officer</strong>
+                                    <span class="email-addr">incident-response@battsafe.internal</span>
+                                </div>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="mailto:support@battsafe.internal?subject=Telemetry%20System%20Support" class="clickable-email">
+                                <div>
+                                    <strong>Technical Support Team</strong>
+                                    <span class="email-addr">support@battsafe.internal</span>
+                                </div>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="footer-col">
+                    <h4 class="footer-heading">System Metadata</h4>
+                    <div class="meta-stack">
+                        <span class="meta-item">Python 3.12+ Flask-SocketIO</span>
+                        <span class="meta-item">Isolation Forest ML v3</span>
+                        <span class="meta-item">ESP32 Firmware v3.2</span>
+                        <span class="meta-item">License: MIT Open Source</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>&copy; 2026 Safety Engineering Systems. Multi-Modal Chemical-Physical Correlation Engine. All safety protocols active.</p>
+                <div class="footer-bottom-links">
+                    <a href="#overview">Back to Top</a>
+                    <a href="#legal-section">Terms of Service</a>
+                    <a href="#legal-section">Privacy Policy</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Application Script -->
+     <!-- Add Socket.io Client JS in your HTML <head> --><!-- Replace local script tags with CDN links -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
